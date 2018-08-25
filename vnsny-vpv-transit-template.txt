@@ -1,0 +1,514 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Provides networking configuration for the Transit Account VPC in us-east-1.
+# ----------------------------------------------------
+# 
+# Instructions: You must deploy the Shared Services VPC in the Shared Services account and get the pPeerVPCId, pPeerRoleArn, and pVPCAccountId outputs to use as parameters in the Dev VPC template. Also, you may have to remark out the Route statements in this template for the initial deployment of the Dev, Transit, Test, and Production VPC templates and then add them once those templates have been deployed.
+# ----------------------------------------------------
+
+Metadata:
+    AWS::CloudFormation::Interface:
+        ParameterGroups:
+          - Label:
+                default: VPC Config
+            Parameters:
+              - pVGWName1
+              - pVPCName1
+              - pCIDR1
+              - pAppPublicSubnetACIDR1
+              - pAppPublicSubnetBCIDR1
+              - pAppPublicSubnetCCIDR1
+              - pVPCName2
+              - pCIDR2
+              - pAppPublicSubnetACIDR2
+              - pAppPublicSubnetBCIDR2
+              - pAppPublicSubnetCCIDR2
+              - pVPCName3
+              - pCIDR3
+              - pAppPublicSubnetACIDR3
+              - pAppPublicSubnetBCIDR3
+              - pAppPublicSubnetCCIDR3
+        ParameterLabels:
+            pVGWName1:
+                default: VGW-Transit-Gateway
+            pVPCName1:
+                default: VPN-B2B
+            pCIDR1:
+                default: VPC CIDR block
+            pAppPublicSubnetACIDR1:
+                default: CIDR block of Application A subnet VPN-B2B (public)
+            pAppPublicSubnetBCIDR1:
+                default: CIDR block of Application B subnet VPN-B2B (public)
+            pAppPublicSubnetCCIDR1:
+                default: CIDR block of Application C subnet VPN-B2B (public)
+            pVPCName2:
+                default: VPN-Client
+            pCIDR2:
+                default: VPC CIDR block VPN-Client
+            pAppPublicSubnetACIDR2:
+                default: CIDR block of Application A subnet VPN-Client (public)
+            pAppPublicSubnetBCIDR2:
+                default: CIDR block of Application B subnet VPN-Client (public)
+            pAppPublicSubnetCCIDR2:
+                default: CIDR block of Application C subnet VPN-Client (public)
+            pVPCName3:
+                default: Gateway
+            pCIDR3:
+                default: VPC CIDR block Gateway
+            pAppPublicSubnetACIDR3:
+                default: CIDR block of Application A subnet Gateway (public)
+            pAppPublicSubnetBCIDR3:
+                default: CIDR block of Application B subnet Gateway (public)
+            pAppPublicSubnetCCIDR3:
+                default: CIDR block of Application C subnet Gateway (public)
+
+# ----------------------------------------------------
+Parameters:
+    EnvironmentName:
+        Description: An environment name that will be prefixed to resource names
+        Type: String
+        Default: "Transit"
+    pVGWName1:
+        Description:  VGW Name
+        Type: String
+        Default: VGW-Transit-Gateway
+    pVPCName1:
+        Description:  VPC Name
+        Type: String
+        Default: VPN-B2B
+    pCIDR1:
+        Description: CIDR block for Transit VPC VPN-B2B
+        Type: String
+        Default: 10.40.0.0/16
+    pAppPublicSubnetACIDR1:
+        Description: CIDR block for Application AZ-1a subnet VPN-B2B
+        Type: String
+        Default: 10.40.8.0/21
+    pAppPublicSubnetBCIDR1:
+        Description: CIDR block for Application AZ-1c subnet VPN-B2B
+        Type: String
+        Default: 10.40.16.0/21
+    pAppPublicSubnetCCIDR1:
+        Description: CIDR block for Application AZ-1d subnet VPN-B2B
+        Type: String
+        Default: 10.40.24.0/21
+    pVPCName2:
+        Description:  VPC Name
+        Type: String
+        Default: VPN-Client
+    pCIDR2:
+        Description: CIDR block for Transit VPC VPN-Client
+        Type: String
+        Default: 10.41.0.0/16
+    pAppPublicSubnetACIDR2:
+        Description: CIDR block for Application AZ-1a subnet VPN-Client
+        Type: String
+        Default: 10.41.8.0/21
+    pAppPublicSubnetBCIDR2:
+        Description: CIDR block for Application AZ-1c subnet VPN-Client
+        Type: String
+        Default: 10.41.16.0/21
+    pAppPublicSubnetCCIDR2:
+        Description: CIDR block for Application AZ-1d subnet VPN-Client
+        Type: String
+        Default: 10.41.24.0/21
+    pVPCName3:
+        Description:  VPC Name
+        Type: String
+        Default: Gateway
+    pCIDR3:
+        Description: CIDR block for Transit VPC
+        Type: String
+        Default: 10.42.0.0/16
+    pAppPublicSubnetACIDR3:
+        Description: CIDR block for Application AZ-1a subnet Gateway
+        Type: String
+        Default: 10.42.8.0/21
+    pAppPublicSubnetBCIDR3:
+        Description: CIDR block for Application AZ-1c subnet Gateway
+        Type: String
+        Default: 10.42.16.0/21
+    pAppPublicSubnetCCIDR3:
+        Description: CIDR block for Application AZ-1d subnet Gateway
+        Type: String
+        Default: 10.42.24.0/21
+    pEnvironment:
+        Description: Environment (dev, test, prod, and Transit)
+        Type: String
+        Default: Transit
+#   pTransitvpcPeeringConnection:
+#       Type: String
+#       Default: pcx-866582153329
+
+#----------
+Resources:
+# ----------------------------------------------------
+# VPC Resources VPN-B2B
+
+    rVPC1:
+        Type: AWS::EC2::VPC
+        Properties:
+            CidrBlock: !Ref pCIDR1
+            EnableDnsSupport: true
+            EnableDnsHostnames: true
+            Tags:
+              - Key: Name
+                Value: !Ref pVPCName1
+              - Key: Environment
+                Value: !Ref pEnvironment
+# VPC Resources VPN-Client
+
+    rVPC2:
+        Type: AWS::EC2::VPC
+        Properties:
+            CidrBlock: !Ref pCIDR2
+            EnableDnsSupport: true
+            EnableDnsHostnames: true
+            Tags:
+              - Key: Name
+                Value: !Ref pVPCName2
+              - Key: Environment
+                Value: !Ref pEnvironment
+# VPC Resources Gateway
+
+    rVPC3:
+        Type: AWS::EC2::VPC
+        Properties:
+            CidrBlock: !Ref pCIDR3
+            EnableDnsSupport: true
+            EnableDnsHostnames: true
+            Tags:
+              - Key: Name
+                Value: !Ref pVPCName3
+              - Key: Environment
+                Value: !Ref pEnvironment
+
+# ----------------------------------------------------
+# VGW
+    VGW1:
+        Type: AWS::EC2::VPNGateway
+        Properties:
+            AmazonSideAsn: 65000
+            Type: ipsec.1
+            Tags:
+                - Key: Name
+                  Value: !Ref pVGWName1
+                - Key: transitvpc:spoke
+                  Value: true
+            
+# ----------------------------------------------------
+# IGW
+    InternetGateway1:
+        Type: AWS::EC2::InternetGateway
+        Properties:
+            Tags:
+                - Key: Name
+                  Value: !Ref pVPCName1
+            
+    InternetGatewayAttachment1:
+        Type: AWS::EC2::VPCGatewayAttachment
+        Properties:
+            InternetGatewayId: !Ref InternetGateway1
+            VpcId: !Ref rVPC1
+
+# IGW
+    InternetGateway2:
+        Type: AWS::EC2::InternetGateway
+        Properties:
+            Tags:
+                - Key: Name
+                  Value: !Ref pVPCName2
+            
+    InternetGatewayAttachment2:
+        Type: AWS::EC2::VPCGatewayAttachment
+        Properties:
+            InternetGatewayId: !Ref InternetGateway2
+            VpcId: !Ref rVPC2
+# IGW
+    InternetGateway3:
+        Type: AWS::EC2::InternetGateway
+        Properties:
+            Tags:
+                - Key: Name
+                  Value: !Ref pVPCName3
+            
+    InternetGatewayAttachment3:
+        Type: AWS::EC2::VPCGatewayAttachment
+        Properties:
+            InternetGatewayId: !Ref InternetGateway3
+            VpcId: !Ref rVPC3
+
+# ----------------------------------------------------
+# Route Table Resources - VPC1
+# Routes for VPC1
+    rRouteTablePublic1:
+        Type: AWS::EC2::RouteTable
+        Properties:
+            VpcId: !Ref rVPC1
+            Tags:
+              - Key: Name
+                Value: !Sub ${EnvironmentName} ${pVPCName1} Public Route for vpc1
+
+    DefaultPublicRoute1: 
+        Type: AWS::EC2::Route
+        DependsOn: InternetGatewayAttachment1
+        Properties: 
+            RouteTableId: !Ref rRouteTablePublic1
+            DestinationCidrBlock: 0.0.0.0/0
+            GatewayId: !Ref InternetGateway1
+
+# Route Table Resources VPC2
+# Routes for VPC2
+    rRouteTablePublic2:
+        Type: AWS::EC2::RouteTable
+        Properties:
+            VpcId: !Ref rVPC2
+            Tags:
+              - Key: Name
+                Value: !Sub ${EnvironmentName} ${pVPCName2} Public Route for vpc2
+
+    DefaultPublicRoute2: 
+        Type: AWS::EC2::Route
+        DependsOn: InternetGatewayAttachment2
+        Properties: 
+            RouteTableId: !Ref rRouteTablePublic2
+            DestinationCidrBlock: 0.0.0.0/0
+            GatewayId: !Ref InternetGateway2
+
+# Route Table Resources VPC3
+# Routes for VPC3
+    rRouteTablePublic3:
+        Type: AWS::EC2::RouteTable
+        Properties:
+            VpcId: !Ref rVPC3
+            Tags:
+              - Key: Name
+                Value: !Sub ${EnvironmentName} ${pVPCName3} Public Route for vpc3
+
+    DefaultPublicRoute3: 
+        Type: AWS::EC2::Route
+        DependsOn: InternetGatewayAttachment3
+        Properties: 
+            RouteTableId: !Ref rRouteTablePublic3
+            DestinationCidrBlock: 0.0.0.0/0
+            GatewayId: !Ref InternetGateway3         
+            
+#-------------------Create Subnets A1, B1, C1---------------------------
+#us-east-1a USMA1
+    rAppPublicSubnetA1: 
+        Type: AWS::EC2::Subnet
+        Properties:
+            VpcId: !Ref rVPC1
+            AvailabilityZone: !Select [ 0, !GetAZs ]
+            CidrBlock: !Ref pAppPublicSubnetACIDR1
+            MapPublicIpOnLaunch: true
+            Tags: 
+                - Key: Name 
+                  Value: !Sub ${pVPCName1} Public Subnet (AZ1)
+#us-east-1c USMA6
+    rAppPublicSubnetB1: 
+        Type: AWS::EC2::Subnet
+        Properties:
+            VpcId: !Ref rVPC1
+            AvailabilityZone: !Select [ 2, !GetAZs ]
+            CidrBlock: !Ref pAppPublicSubnetBCIDR1
+            MapPublicIpOnLaunch: true
+            Tags: 
+                - Key: Name 
+                  Value: !Sub ${pVPCName1} Public Subnet (AZ2)
+#us-east-1d USMA7
+    rAppPublicSubnetC1: 
+        Type: AWS::EC2::Subnet
+        Properties:
+            VpcId: !Ref rVPC1
+            AvailabilityZone: !Select [ 3, !GetAZs ]
+            CidrBlock: !Ref pAppPublicSubnetCCIDR1
+            MapPublicIpOnLaunch: true
+            Tags: 
+                - Key: Name 
+                  Value: !Sub ${pVPCName1} Public Subnet (AZ3)
+        
+#-------------------Create Subnets A2, B2, C2---------------------------         
+  #us-east-1a- USMA1
+    rAppPublicSubnetA2: 
+        Type: AWS::EC2::Subnet
+        Properties:
+            VpcId: !Ref rVPC2
+            AvailabilityZone: !Select [ 0, !GetAZs ]
+            CidrBlock: !Ref pAppPublicSubnetACIDR2
+            MapPublicIpOnLaunch: true
+            Tags: 
+                - Key: Name 
+                  Value: !Sub ${pVPCName2} Public Subnet (AZ1)
+#us-east-1c- USMA6
+    rAppPublicSubnetB2: 
+        Type: AWS::EC2::Subnet
+        Properties:
+            VpcId: !Ref rVPC2
+            AvailabilityZone: !Select [ 2, !GetAZs ]
+            CidrBlock: !Ref pAppPublicSubnetBCIDR2
+            MapPublicIpOnLaunch: true
+            Tags: 
+                - Key: Name 
+                  Value: !Sub ${pVPCName2} Public Subnet (AZ2)
+#us-east-1d- USMA7
+    rAppPublicSubnetC2: 
+        Type: AWS::EC2::Subnet
+        Properties:
+            VpcId: !Ref rVPC2
+            AvailabilityZone: !Select [ 3, !GetAZs ]
+            CidrBlock: !Ref pAppPublicSubnetCCIDR2
+            MapPublicIpOnLaunch: true
+            Tags: 
+                - Key: Name 
+                  Value: !Sub ${pVPCName2} Public Subnet (AZ3)          
+#-------------------Create Subnets A3, B3, C3---------------------------   
+#us-east-1a- USMA1
+    rAppPublicSubnetA3: 
+        Type: AWS::EC2::Subnet
+        Properties:
+            VpcId: !Ref rVPC3
+            AvailabilityZone: !Select [ 0, !GetAZs ]
+            CidrBlock: !Ref pAppPublicSubnetACIDR3
+            MapPublicIpOnLaunch: true
+            Tags: 
+                - Key: Name 
+                  Value: !Sub ${pVPCName3} Public Subnet (AZ1)
+#us-east-1c- USMA6
+    rAppPublicSubnetB3: 
+        Type: AWS::EC2::Subnet
+        Properties:
+            VpcId: !Ref rVPC3
+            AvailabilityZone: !Select [ 2, !GetAZs ]
+            CidrBlock: !Ref pAppPublicSubnetBCIDR3
+            MapPublicIpOnLaunch: true
+            Tags: 
+                - Key: Name 
+                  Value: !Sub ${pVPCName3} Public Subnet (AZ2)
+#us-east-1d- USMA7
+    rAppPublicSubnetC3: 
+        Type: AWS::EC2::Subnet
+        Properties:
+            VpcId: !Ref rVPC3
+            AvailabilityZone: !Select [ 3, !GetAZs ]
+            CidrBlock: !Ref pAppPublicSubnetCCIDR3
+            MapPublicIpOnLaunch: true
+            Tags: 
+                - Key: Name 
+                  Value: !Sub ${pVPCName3} Public Subnet (AZ3)            
+
+#---------------------------------------------------------------
+
+
+# ----------------------- Route Table Associations -----------------------
+# Subnet & Route Table Association - Route Table 2#
+    rAppPublicSubnetARouteTableAssociation1:
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties:
+            RouteTableId: !Ref rRouteTablePublic1
+            SubnetId: !Ref rAppPublicSubnetA1
+
+    rAppPublicSubnetARouteTableAssociation1:
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties:
+            RouteTableId: !Ref rRouteTablePublic1
+            SubnetId: !Ref rAppPublicSubnetB1
+
+    rAppPublicSubnetARouteTableAssociation1:
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties:
+            RouteTableId: !Ref rRouteTablePublic1
+            SubnetId: !Ref rAppPublicSubnetC1
+#----------------------------------------------------------
+# Subnet & Route Table Association - Route Table 2                        
+    rAppPublicSubnetARouteTableAssociation2:
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties:
+            RouteTableId: !Ref rRouteTablePublic2
+            SubnetId: !Ref rAppPublicSubnetA2
+
+    rAppPublicSubnetARouteTableAssociation2:
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties:
+            RouteTableId: !Ref rRouteTablePublic2
+            SubnetId: !Ref rAppPublicSubnetB2
+
+    rAppPublicSubnetARouteTableAssociation2:
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties:
+            RouteTableId: !Ref rRouteTablePublic2
+            SubnetId: !Ref rAppPublicSubnetC2
+            
+# Subnet & Route Table Association - Route Table 3
+    rAppPublicSubnetARouteTableAssociation3:
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties:
+            RouteTableId: !Ref rRouteTablePublic3
+            SubnetId: !Ref rAppPublicSubnetA3
+
+    rAppPublicSubnetARouteTableAssociation3:
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties:
+            RouteTableId: !Ref rRouteTablePublic3
+            SubnetId: !Ref rAppPublicSubnetB3
+
+    rAppPublicSubnetARouteTableAssociation3:
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties:
+            RouteTableId: !Ref rRouteTablePublic3
+            SubnetId: !Ref rAppPublicSubnetC3
+    
+    
+# ----------------------------------------------------
+# S3Endpoints
+
+    rS3Endpoint1:
+      Type: AWS::EC2::VPCEndpoint
+      Properties:
+        PolicyDocument:
+          Statement:
+          - Action: "*"
+            Effect: Allow
+            Resource: "*"
+            Principal: "*"
+        RouteTableIds:
+          - !Ref rRouteTablePublic1
+        ServiceName: !Join ['', [com.amazonaws., !Ref 'AWS::Region', .s3]]
+        VpcId: !Ref rVPC1  
+
+    rS3Endpoint2:
+      Type: AWS::EC2::VPCEndpoint
+      Properties:
+        PolicyDocument:
+          Statement:
+          - Action: "*"
+            Effect: Allow
+            Resource: "*"
+            Principal: "*"
+        RouteTableIds:
+          - !Ref rRouteTablePublic2
+        ServiceName: !Join ['', [com.amazonaws., !Ref 'AWS::Region', .s3]]
+        VpcId: !Ref rVPC2  
+
+    rS3Endpoint3:
+      Type: AWS::EC2::VPCEndpoint
+      Properties:
+        PolicyDocument:
+          Statement:
+          - Action: "*"
+            Effect: Allow
+            Resource: "*"
+            Principal: "*"
+        RouteTableIds:
+          - !Ref rRouteTablePublic3
+        ServiceName: !Join ['', [com.amazonaws., !Ref 'AWS::Region', .s3]]
+        VpcId: !Ref rVPC3  
+  
+# ----------------------------------------------------
+Outputs:
+    rVPC1:
+        Value: !Ref rVPC1
+        Export:
+          Name:
+            Fn::Sub: "${AWS::StackName}-VPCID"
+    rRouteTablePublic1:
+        Value: !Ref rRouteTablePublic1
